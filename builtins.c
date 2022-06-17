@@ -1,130 +1,116 @@
 #include "shell.h"
 
-#define SETOWD(V) (V = _strdup(_getenv("OLDPWD")))
 /**
- * change_dir - changes directory
- * @data: a pointer to the data structure
- *
- * Return: (Success) 0 is returned
- * ------- (Fail) negative number will returned
+ * fun_builtin - check if the command passed is a builtin
+ * @command: string to check
+ *Return: -1 on failure 1 on success
  */
-int change_dir(sh_t *data)
-{
-	char *home;
 
-	home = _getenv("HOME");
-	if (data->args[1] == NULL)
+int fun_builtin(char **command)
+{
+	int blt = 0;
+
+	if (_strcmp(command[0], "exit") == 0)
 	{
-		SETOWD(data->oldpwd);
-		if (chdir(home) < 0)
-			return (FAIL);
-		return (SUCCESS);
-	}
-	if (_strcmp(data->args[1], "-") == 0)
-	{
-		if (data->oldpwd == 0)
+		if (command[1] == NULL)
 		{
-			SETOWD(data->oldpwd);
-			if (chdir(home) < 0)
-				return (FAIL);
+			free_array(command);
+			exit(0);
+		}
+	}
+	if (_strcmp(command[0], "env") == 0)
+	{
+		blt = print_env();
+		return (blt);
+	}
+	if (_strcmp(command[0], "cd") == 0)
+	{
+		return (change_dir(command));
+	}
+	return (0);
+}
+/**
+* print_env - prints all the environment variables
+*Return: 0
+*/
+
+int print_env(void)
+{
+	char **str;
+	int len, i = 0;
+
+	str = environ;
+	while (str[i] != NULL)
+	{
+		len = strlen(str[i]);
+		write(STDOUT_FILENO, str[i], len);
+		write(STDOUT_FILENO, "\n", 1);
+		i++;
+	}
+		return (0);
+}
+
+/**
+ *change_dir - change directory
+ *@cmd: string
+ *Return: 0 on success -1 on fail
+ */
+int change_dir(char **cmd)
+{
+		char *new_dir;
+		char cwd[PATH_MAX];
+		int result = 0;
+
+		if (cmd[1] == NULL)
+		{
+			new_dir  = (_getenv("HOME"));
+			result = chdir(new_dir);  /* chdir() returns zero (0) success*/
+		}
+		else if (_strcmp(cmd[1], "-") == 0)
+		{
+			new_dir = (_getenv("OLDPWD"));
+			result = chdir(new_dir);
 		}
 		else
 		{
-			SETOWD(data->oldpwd);
-			if (chdir(data->oldpwd) < 0)
-				return (FAIL);
+			result = chdir(cmd[1]);
 		}
-	}
-	else
-	{
-		SETOWD(data->oldpwd);
-		if (chdir(data->args[1]) < 0)
-			return (FAIL);
-	}
-	return (SUCCESS);
-}
-#undef GETCWD
-/**
- * abort_prg - exit the program
- * @data: a pointer to the data structure
- *
- * Return: (Success) 0 is returned
- * ------- (Fail) negative number will returned
- */
-int abort_prg(sh_t *data __attribute__((unused)))
-{
-	int code, i = 0;
-
-	if (data->args[1] == NULL)
-	{
-		free_data(data);
-		exit(errno);
-	}
-	while (data->args[1][i])
-	{
-		if (_isalpha(data->args[1][i++]) < 0)
+		if (result == -1)
 		{
-			data->error_msg = _strdup("Illegal number\n");
-			return (FAIL);
+			perror("hsh");
+			return (-1);
 		}
-	}
-	code = _atoi(data->args[1]);
-	free_data(data);
-	exit(code);
-}
-/**
- * display_help - display the help menu
- * @data: a pointer to the data structure
- *
- * Return: (Success) 0 is returned
- * ------- (Fail) negative number will returned
- */
-int display_help(sh_t *data)
-{
-	int fd, fw, rd = 1;
-	char c;
-
-	fd = open(data->args[1], O_RDONLY);
-	if (fd < 0)
-	{
-		data->error_msg = _strdup("no help topics match\n");
-		return (FAIL);
-	}
-	while (rd > 0)
-	{
-		rd = read(fd, &c, 1);
-		fw = write(STDOUT_FILENO, &c, rd);
-		if (fw < 0)
+		else
 		{
-			data->error_msg = _strdup("cannot write: permission denied\n");
-			return (FAIL);
+			getcwd(cwd, sizeof(cwd));
 		}
-	}
-	PRINT("\n");
-	return (SUCCESS);
+		return (0);
 }
 /**
- * handle_builtin - handle and manage the builtins cmd
- * @data: a pointer to the data structure
- *
- * Return: (Success) 0 is returned
- * ------- (Fail) negative number will returned
+ * check_builtin - check if the command passed is a builtin
+ * @argv: string to check
+ *Return: -1 on failure 1 on success
  */
-int handle_builtin(sh_t *data)
-{
-	blt_t blt[] = {
-		{"exit", abort_prg},
-		{"cd", change_dir},
-		{"help", display_help},
-		{NULL, NULL}
-	};
-	int i = 0;
 
-	while ((blt + i)->cmd)
+int check_builtin(char *argv)
+{
+		int i = 0;
+		char *command[3];
+
+	command[0] = "exit";
+	command[1] = "env";
+	command[2] = "cd";
+	if (*command == NULL)
 	{
-		if (_strcmp(data->args[0], (blt + i)->cmd) == 0)
-			return ((blt + i)->f(data));
+		return (-1);
+	}
+	while (i < 3)
+	{
+		if (_strcmp(argv, command[i]) == 0)
+		{
+			return (1);
+		}
 		i++;
 	}
-	return (FAIL);
+	return (-1);
 }
