@@ -1,29 +1,33 @@
 #include "shell.h"
 
 /**
- * prompt - Display Shell Prompt
- */
-void prompt(void)
+* parse_line - parser the line from the input
+* @line: string
+*@delim: the delimet
+*Return: array of string
+*/
+char **parse_line(char *line, char *delim)
 {
-	PRINTER("$ ");
-}
-/**
- * print_error - Display Error Based on Command and How Many Time Shell Looped
- * @input:User Input
- * @counter:Simple Shell Count Loop
- * @argv:Program Name
- * Return: Void
- */
-void print_error(char *input, int counter, char **argv)
-{
-	char *er;
+	char **array;
+	char *token;
+	int i = 0;
 
-	PRINTER(argv[0]);
-	PRINTER(": ");
-	er = _itoa(counter);
-	PRINTER(er);
-	free(er);
-	PRINTER(": ");
-	PRINTER(input);
-	PRINTER(": not found\n");
+	if (line == NULL)
+		return (NULL);
+	array = malloc(sizeof(char *) * SIZE);
+	if (array == NULL)
+	{
+		write(STDERR_FILENO, "error\n", 6);
+		exit(EXIT_FAILURE);
+	}
+
+	token = strtok(line, delim);
+	while (token != NULL)
+	{
+		array[i++] = token;
+		token = strtok(NULL, delim);
+	}
+	array[i] = NULL;
+
+	return (array);
 }
